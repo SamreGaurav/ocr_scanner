@@ -9,23 +9,20 @@ class CardParser {
     final expiry = _extractExpiry(cleaned);
     final name = _extractName(cleaned);
 
-    if (cardNumber == null ||
-        !LuhnValidator.isValid(cardNumber)) {
-      throw Exception("Invalid card");
-    }
+    final isValid = cardNumber != null && LuhnValidator.isValid(cardNumber);
 
     return CardEntity(
-      cardNumber: cardNumber,
+      cardNumber: cardNumber ?? '',
       expiry: expiry,
       holderName: name,
+      isValid: isValid,
     );
   }
 
   String _cleanText(String text) {
     return text
-        .replaceAll('O', '0')
-        .replaceAll('I', '1')
-        .replaceAll('l', '1');
+        .replaceAll('l', '1') // keep minimal safe replacements
+        .replaceAll(RegExp(r'[^\x00-\x7F]+'), ''); // remove weird chars
   }
 
   String? _extractCardNumber(String text) {
@@ -40,18 +37,33 @@ class CardParser {
   }
 
   String? _extractExpiry(String text) {
-    final regex = RegExp(r'(0[1-9]|1[0-2])[/\-]?\d{2,4}');
+    final regex = RegExp(r'(0[1-9]|1[0-2])\/([0-9]{2})');
     final match = regex.firstMatch(text);
 
     return match?.group(0);
   }
 
   String? _extractName(String text) {
+    // First try labeled extraction
+    final regex = RegExp(
+      r'(?:NAME|CARDHOLDER NAME|CARD HOLDER)\s*[:\-]?\s*([A-Z ]{3,})',
+      caseSensitive: false,
+    );
+
+    final match = regex.firstMatch(text);
+
+    if (match != null) {
+      return match.group(1)?.trim();
+    }
+
+    // 🔥 Fallback: detect standalone uppercase name
     final lines = text.split('\n');
 
-    for (var line in lines) {
-      if (RegExp(r'^[A-Z ]{5,}$').hasMatch(line)) {
-        return line.trim();
+    for (final line in lines) {
+      final cleanedLine = line.trim();
+
+      if (RegExp(r'^[A-Z ]{5,}$').hasMatch(cleanedLine)) {
+        return cleanedLine;
       }
     }
 

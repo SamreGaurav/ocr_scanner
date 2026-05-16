@@ -1,12 +1,16 @@
 class LuhnValidator {
-  static bool isValid(String cardNumber) {
-    final digits = cardNumber.replaceAll(RegExp(r'\D'), '');
+  static bool isValid(String? input) {
+    if (input == null || input.trim().isEmpty) return false;
+
+    final sanitized = input.replaceAll(RegExp(r'\s+'), '');
+
+    if (!RegExp(r'^\d+$').hasMatch(sanitized)) return false;
 
     int sum = 0;
     bool alternate = false;
 
-    for (int i = digits.length - 1; i >= 0; i--) {
-      int n = int.parse(digits[i]);
+    for (int i = sanitized.length - 1; i >= 0; i--) {
+      int n = int.parse(sanitized[i]);
 
       if (alternate) {
         n *= 2;

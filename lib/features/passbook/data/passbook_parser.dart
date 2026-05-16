@@ -38,12 +38,11 @@ class PassbookParser {
   }
 
   String? _extractName(String text) {
-    final lines = text.split('\n');
+    final regex = RegExp(r'(?:NAME|CUSTOMER NAME)\s*[:\-]?\s*(.+)', caseSensitive: false);
+    final match = regex.firstMatch(text);
 
-    for (var line in lines) {
-      if (line.contains("NAME")) {
-        return line.replaceAll("NAME", "").trim();
-      }
+    if (match != null) {
+      return match.group(1)?.trim();
     }
 
     return null;
